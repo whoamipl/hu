@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,53 +19,55 @@ public class HuAlgorithm {
 
     private void algorithm() {
         int time = 1;
+        List<Task> sortedTasksList;
+        List<Integer> taskToDelete;
         setTasksLevel(tasks);
         do {
-            List<Task> sortedTasksList = getFreeTasksList(tasks).stream()
+            sortedTasksList = getFreeTasksList(tasks).stream()
                     .sorted(Comparator.comparing(t -> t.getLevel()))
                     .collect(Collectors.toList());
-
+            taskToDelete = new ArrayList<>();
             while (sortedTasksList.size() != 0) {
-                 for (int i = 0; i < Main.machineCount; ++i) {
-                    if (sortedTasksList.size() != 0 ) {
-                            int taskId = sortedTasksList.get(0).getId();
-                            machines.get(i).insertTask(taskId);
-                            tasks.remove(sortedTasksList.get(0));
-                            sortedTasksList.remove(0);
-                            updateGraph(taskId);
-                    }
-                    else
+                for (int i = 0; i < Main.machineCount; ++i) {
+                    if (sortedTasksList.size() != 0) {
+                        int taskId = sortedTasksList.get(0).getId();
+                        machines.get(i).insertTask(taskId);
+                        taskToDelete.add(taskId);
+                        tasks.remove(sortedTasksList.get(0));
+                        sortedTasksList.remove(0);
+                    } else
                         break;
                 }
             }
+            updateGraph(taskToDelete);
             time++;
-            System.out.println("Time: " + time);
         } while (getFreeTasksList(tasks).size() != 0);
+
         for (Machine m : machines) {
             System.out.println(m.getTasksIds().toString());
         }
-
+        System.out.println("Time: " + time);
     }
 
-    private void updateGraph(int taskId) {
+    private void updateGraph(List<Integer> taskToDelete) {
         for (Task t : tasks) {
-            System.out.println(t.getId());
-            if(t.hasPredecesors()) {
-                System.out.println("Task " + taskId + " deleted!");
-                t.getPredecesors().remove(new Integer(taskId));
-            }
-            else
-                t.setFree();
+            if (!t.isFree()) {
+                if (t.hasSuccesors())
+                    t.getSuccesors().removeAll(taskToDelete);
 
-            if(t.hasSuccesors())
-                t.getSuccesors().remove(new Integer(taskId));
+                if (t.hasPredecesors()) {
+                    t.getPredecesors().removeAll(taskToDelete);
+                }
+                if (!t.hasPredecesors())
+                    t.setFree();
+            }
         }
     }
 
     private List<Task> getFreeTasksList(List<Task> tasks) {
         return tasks.stream()
-            .filter(t -> t.isFree())
-            .collect(Collectors.toList());
+                .filter(t -> t.isFree())
+                .collect(Collectors.toList());
     }
 
     public void eval() {
